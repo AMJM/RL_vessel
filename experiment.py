@@ -313,3 +313,5 @@ if __name__ == '__main__':
     # sample_transitions(start, end)
     evaluate_agent('agents/agent_20180705085715Sequential_r____disc_0.8it42.h5')
 
+    #Teste
+

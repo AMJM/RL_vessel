@@ -57,7 +57,8 @@ def convert_to_simple_state(state, g_helper):
     bl = g_helper.get_shore_balance(state[0], state[1])
     misalign = state[2] + 103.5
     theta_p = state[5]
-    return v_lon, misalign, bl, theta_p
+    # return v_lon, misalign, bl, theta_p
+    return v_lon, misalign, bl, theta_p, 0, 0, 0
 
 
 

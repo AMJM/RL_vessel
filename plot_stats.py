@@ -1,7 +1,7 @@
 from simulation_settings import *
 import reward
 import learner
-import environment
+import environment_rl
 from viewer import Viewer
 import utils
 import csv
@@ -34,7 +34,7 @@ def collect_trajectories():
             ret_tuples = list()
             results = list()
             num_steps = list()
-            env = environment.Environment(rw_mapper=reward_mapping)
+            env = environment_rl.Environment(rw_mapper=reward_mapping)
             env.set_up()
             for start_pos in starting_points:
                 final_flag = 0

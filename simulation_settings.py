@@ -2,6 +2,8 @@ import datetime
 from geometry_helper import GeometryHelper
 import actions
 import numpy as np
+from state_helper import Point
+
 timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
 
 def channel_angle_e_ccw(point_a, point_b):
@@ -34,6 +36,25 @@ N02 = (11770.3259, 5378.4429)
 funnel_end = (14000, 4000)
 plot = False
 goal_heading_e_ccw = channel_angle_e_ccw(N03, N05)
+
+# Variavel para controle do tipo de simulacao
+SIM_RL = 0      # Simulacao de reinforcement learning
+SIM_SUP = 1     # Simulacao supervisionada
+simulation_type = SIM_SUP
+
+ST_POSX = 0
+ST_POSY = 1
+ST_POSZZ = 2
+ST_VELX = 3
+ST_VELY = 4
+ST_VELZZ = 5
+ST_TARGET = 1
+ST_MID = 0
+
+list_buoys = [Point(11722.4553, 5583.4462), Point(11771.3626, 5379.2566), Point(9189.9177, 4969.4907), Point(9237.9939, 4765.5281),
+              Point(6895.1451, 4417.3749), Point(6954.9285, 4225.9083), Point(5540.617, 4088.186), Point(5809.4056, 3767.7633)]
+target = Point(5790.0505, 3944.9947)
+p3dfile = "Aframax_Full_revTannuri.p3d"
 
 steps = 20
 step_increment = 0.5

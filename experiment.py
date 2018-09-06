@@ -1,5 +1,5 @@
 import qlearning
-import environment
+import environment_rl
 from simulation_settings import *
 import reward
 from viewer import Viewer
@@ -46,7 +46,7 @@ def replay_trajectory(episodes):
 def sample_transitions(start_state=0, end_state=-1) -> object:
     reward_mapping = reward.RewardMapper('quadratic', _g_helper=geom_helper)
     reward_mapping.set_goal(goal, goal_heading_e_ccw, goal_vel_lon)
-    env = environment.Environment(rw_mapper=reward_mapping)
+    env = environment_rl.Environment(rw_mapper=reward_mapping)
     env.set_up()
     # env.set_sampling_mode(start_state, end_state)
     env.set_single_start_pos_mode([9000, 4819.10098, -103.5, 3, 0, 0])
@@ -104,7 +104,7 @@ def main():
     action_space_name = 'cte_rotation'
     action_space = actions.BaseAction(action_space_name)
     agent = qlearning.QLearning(q_file, epsilon=0.1, action_space=action_space, gamma=1.0)
-    env = environment.Environment()
+    env = environment_rl.Environment()
     # with open(variables_file, 'wb') as outfile:
     pickle_vars = dict()
     pickle_vars['action_space'] = action_space_name
@@ -148,7 +148,7 @@ def evaluate_agent(ag_obj):
     reward_mapping = reward.RewardMapper('quadratic', _g_helper=geom_helper)
     reward_mapping.set_goal(goal, goal_heading_e_ccw, goal_vel_lon)
     agent = learner.Learner(load_saved_regression=ag_obj, nn_=True)
-    env = environment.Environment(rw_mapper=reward_mapping)
+    env = environment_rl.Environment(rw_mapper=reward_mapping)
     env.set_up()
     viewer = Viewer()
     viewer.plot_boundary(buoys)
@@ -216,7 +216,7 @@ def evaluate_agent(ag_obj):
 
 
 def run_episodes(agent, rw_mapper):
-    env = environment.Environment(rw_mapper=rw_mapper)
+    env = environment_rl.Environment(rw_mapper=rw_mapper)
     env.set_up()
     starting_points = [
         [11000, 5360, -106, 3, 0, 0],
@@ -311,7 +311,5 @@ if __name__ == '__main__':
 
     # main()
     # sample_transitions(start, end)
-    evaluate_agent('agents/agent_20180705085715Sequential_r____disc_0.8it42.h5')
-
-    #Teste
+    evaluate_agent('dyna/default_agentSequential_r_cte.h5')
 

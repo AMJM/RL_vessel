@@ -236,10 +236,36 @@ class State_Helper:
         self.buoys = buoys
         self.target = target
 
-    def get_inputtable_state(self, state):
+    def get_inputtable_rudder_state(self, state):
         from simulation_settings import ST_MID, ST_TARGET, ST_POSX, ST_POSY, ST_POSZZ, ST_VELX, ST_VELY, ST_VELZZ
         center = Point(state[ST_POSX], state[ST_POSY])
         angle = state[ST_POSZZ]
         position = self.ship.calc_dist_midline(center, angle, self.buoys, self.target)
 
-        return [position[ST_MID], position[ST_TARGET], angle, state[ST_VELX], state[ST_VELY], state[ST_VELZZ]]
+        # TODO: Arrumar essa entrada da rede
+        # return [position[ST_MID], position[ST_TARGET], angle, state[ST_VELX], state[ST_VELY], state[ST_VELZZ]]
+        return [state[ST_POSZZ], state[ST_VELX], state[ST_VELY], state[ST_VELZZ], position[ST_MID]]
+
+    def get_inputtable_prop_state(self, state):
+        from simulation_settings import ST_MID, ST_TARGET, ST_POSX, ST_POSY, ST_POSZZ, ST_VELX, ST_VELY, ST_VELZZ
+        center = Point(state[ST_POSX], state[ST_POSY])
+        angle = state[ST_POSZZ]
+        position = self.ship.calc_dist_midline(center, angle, self.buoys, self.target)
+
+        # TODO: Arrumar essa entrada da rede
+        # return [position[ST_MID], position[ST_TARGET], angle, state[ST_VELX], state[ST_VELY], state[ST_VELZZ]]
+        return [state[ST_POSZZ], state[ST_VELX], state[ST_VELY], state[ST_VELZZ], position[ST_MID], position[ST_TARGET]]
+
+    def get_converted_propeller(self, action):
+        from simulation_settings import discrete_velocity, NUM_PROP_VEL
+        return discrete_velocity[action + NUM_PROP_VEL]
+
+    def get_converted_rudder(self, action):
+        from simulation_settings import MAX_RUDDER_RAD
+        return action / MAX_RUDDER_RAD
+
+    def set_position(self, state):
+        from simulation_settings import ST_POSX, ST_POSY, ST_POSZZ, geom_helper
+        geom_helper.set_polygon_position(state[ST_POSX], state[ST_POSY], state[ST_POSZZ])
+        if geom_helper.ship_collided():
+            print('SHIP COLLIDED!!!')

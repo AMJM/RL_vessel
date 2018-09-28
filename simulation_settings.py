@@ -56,6 +56,10 @@ list_buoys = [Point(11722.4553, 5583.4462), Point(11771.3626, 5379.2566), Point(
 target = Point(5790.0505, 3944.9947)
 p3dfile = "Aframax_Full_revTannuri.p3d"
 
+discrete_velocity = [-0.8, -0.6, -0.4, -0.2, 0.0, 0.2, 0.4, 0.6, 0.8]
+MAX_RUDDER_RAD = 0.61
+NUM_PROP_VEL = 4
+
 steps = 20
 step_increment = 0.5
 

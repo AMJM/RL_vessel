@@ -22,6 +22,31 @@ inp_prop = ['zz', 'vx', 'vy', 'vzz', 'distance_midline', 'distance_target']
 target_rudder = 'rudder_demanded'
 target_prop = 'propeller_demanded'
 
+class Train_Log:
+    def __init__(self, type_model):
+        self.type_model = type_model
+        self.train_time = None
+        self.loss = None
+        self.flag_error = False
+        self.log_error = None
+
+    def write_log(self, train_code):
+        file = open('./keras_logs/' + train_code + '/train_log_' + train_code + '.txt', 'a+')
+        if self.type_model == RUDDER:
+            file.write('\n\n*** Treinamento RUDDER ***')
+        else:
+            file.write('\n\n*** Treinamento PROPELLER ***')
+
+        if self.flag_error:
+            file.write('\n\tResultado: ERRO')
+            file.write('\n\tLog de erro:')
+            file.write('\n' + str(self.log_error))
+        else:
+            file.write('\n\tResultado: CONCLUÍDO SEM ERRO')
+            file.write('\n\tTempo de treinamento: %s' % str(self.train_time))
+            file.write('\n\tLoss: %s' % self.loss)
+        file.close()
+
 class Controller:
     def __init__(self):
         self.model_rudder = None
@@ -35,6 +60,8 @@ class Controller:
         self.y_rudder_scaler = None
         self.x_prop_scaler = None
         self.y_prop_scaler = None
+        self.rudder_logger = Train_Log(RUDDER)
+        self.prop_logger = Train_Log(PROPELLER)
 
     def load_model(self, train_code):
         self.train_code = train_code
@@ -47,8 +74,11 @@ class Controller:
         self.has_prop_scaler = True
         self.has_rudder_scaler = True
         self.loaded_data = False
+        self.rudder_logger = Train_Log(RUDDER)
+        self.prop_logger = Train_Log(PROPELLER)
 
     def select_rudder_action(self, input):
+        print('Entrada rudder: ' + str(input))
         input = self.x_rudder_scaler.transform(np.expand_dims(input, 0))
         input = np.expand_dims(input, 0)
         output = self.model_rudder.predict(input)
@@ -56,6 +86,7 @@ class Controller:
         return output[0][0]
 
     def select_prop_action(self, input):
+        print('Entrada propeller: ' + str(input))
         input = self.x_prop_scaler.transform(np.expand_dims(input, 0))
         input = np.expand_dims(input, 0)
         output = self.model_prop.predict(input)
@@ -77,8 +108,19 @@ class Controller:
             print('DF shape:' + str(df.shape))
 
         print('\n****** TREINAMENTO MODELO ' + self.train_code + ' ******')
-        self.run_train(df, batch_size, sequence_length, RUDDER)
-        self.run_train(df, batch_size, sequence_length, PROPELLER)
+        try:
+            self.run_train(df, batch_size, sequence_length, RUDDER)
+        except Exception as e:
+            self.rudder_logger.flag_error = True
+            self.rudder_logger.log_error = e
+        self.rudder_logger.write_log(self.train_code)
+
+        try:
+            self.run_train(df, batch_size, sequence_length, PROPELLER)
+        except Exception as e:
+            self.prop_logger.flag_error = True
+            self.prop_logger.log_error = e
+        self.prop_logger.write_log(self.train_code)
 
     def set_num_model(self, num_model):
         self.num_model = num_model
@@ -194,7 +236,7 @@ class Controller:
         mdl.add(Dense(num_y_signals, activation='sigmoid'))
         optimizer = RMSprop(lr=0.001)
         mdl.compile(loss='mean_squared_error', optimizer=optimizer)
-        return
+        return mdl
 
     def model_prop_4(self, num_x_signals, num_y_signals):
         mdl = Sequential()
@@ -223,7 +265,7 @@ class Controller:
         mdl.add(Dense(num_y_signals, activation='sigmoid'))
         optimizer = RMSprop(lr=0.001)
         mdl.compile(loss='mean_squared_error', optimizer=optimizer)
-        return
+        return mdl
 
     def model_prop_5(self, num_x_signals, num_y_signals):
         mdl = Sequential()
@@ -239,7 +281,7 @@ class Controller:
         mdl.add(Dense(num_y_signals, activation='sigmoid'))
         optimizer = RMSprop(lr=0.001)
         mdl.compile(loss='mean_squared_error', optimizer=optimizer)
-        return
+        return mdl
 
     def model_rudder_6(self, num_x_signals, num_y_signals):
         mdl = Sequential()
@@ -258,7 +300,7 @@ class Controller:
         mdl.add(Dense(num_y_signals, activation='sigmoid'))
         optimizer = RMSprop(lr=0.001)
         mdl.compile(loss='mean_squared_error', optimizer=optimizer)
-        return
+        return mdl
 
     def model_prop_6(self, num_x_signals, num_y_signals):
         mdl = Sequential()
@@ -277,7 +319,7 @@ class Controller:
         mdl.add(Dense(num_y_signals, activation='sigmoid'))
         optimizer = RMSprop(lr=0.001)
         mdl.compile(loss='mean_squared_error', optimizer=optimizer)
-        return
+        return mdl
 
     def model_rudder_7(self, num_x_signals, num_y_signals):
         mdl = Sequential()
@@ -296,7 +338,7 @@ class Controller:
         mdl.add(Dense(num_y_signals, activation='sigmoid'))
         optimizer = RMSprop(lr=0.001)
         mdl.compile(loss='mean_squared_error', optimizer=optimizer)
-        return
+        return mdl
 
     def model_prop_7(self, num_x_signals, num_y_signals):
         mdl = Sequential()
@@ -315,7 +357,7 @@ class Controller:
         mdl.add(Dense(num_y_signals, activation='sigmoid'))
         optimizer = RMSprop(lr=0.001)
         mdl.compile(loss='mean_squared_error', optimizer=optimizer)
-        return
+        return mdl
 
     def model_rudder_8(self, num_x_signals, num_y_signals):
         mdl = Sequential()
@@ -334,7 +376,7 @@ class Controller:
         mdl.add(Dense(num_y_signals, activation='sigmoid'))
         optimizer = RMSprop(lr=0.001)
         mdl.compile(loss='mean_squared_error', optimizer=optimizer)
-        return
+        return mdl
 
     def model_prop_8(self, num_x_signals, num_y_signals):
         mdl = Sequential()
@@ -353,7 +395,7 @@ class Controller:
         mdl.add(Dense(num_y_signals, activation='sigmoid'))
         optimizer = RMSprop(lr=0.001)
         mdl.compile(loss='mean_squared_error', optimizer=optimizer)
-        return
+        return mdl
 
     def model_rudder_9(self, num_x_signals, num_y_signals):
         mdl = Sequential()
@@ -372,7 +414,7 @@ class Controller:
         mdl.add(Dense(num_y_signals, activation='sigmoid'))
         optimizer = RMSprop(lr=0.001)
         mdl.compile(loss='mean_squared_error', optimizer=optimizer)
-        return
+        return mdl
 
     def model_prop_9(self, num_x_signals, num_y_signals):
         mdl = Sequential()
@@ -391,7 +433,7 @@ class Controller:
         mdl.add(Dense(num_y_signals, activation='sigmoid'))
         optimizer = RMSprop(lr=0.001)
         mdl.compile(loss='mean_squared_error', optimizer=optimizer)
-        return
+        return mdl
 
     def model_rudder_10(self, num_x_signals, num_y_signals):
         mdl = Sequential()
@@ -410,7 +452,7 @@ class Controller:
         mdl.add(Dense(num_y_signals, activation='sigmoid'))
         optimizer = RMSprop(lr=0.001)
         mdl.compile(loss='mean_squared_error', optimizer=optimizer)
-        return
+        return mdl
 
     def model_prop_10(self, num_x_signals, num_y_signals):
         mdl = Sequential()
@@ -429,7 +471,7 @@ class Controller:
         mdl.add(Dense(num_y_signals, activation='sigmoid'))
         optimizer = RMSprop(lr=0.001)
         mdl.compile(loss='mean_squared_error', optimizer=optimizer)
-        return
+        return mdl
 
     def model_rudder_11(self, num_x_signals, num_y_signals):
         mdl = Sequential()
@@ -534,7 +576,7 @@ class Controller:
         mdl.add(Dense(num_y_signals, activation='softsign'))
         optimizer = RMSprop(lr=0.001)
         mdl.compile(loss='mean_squared_error', optimizer=optimizer)
-        return
+        return mdl
 
     def model_prop_15(self, num_x_signals, num_y_signals):
         mdl = Sequential()
@@ -563,7 +605,7 @@ class Controller:
         mdl.add(Dense(num_y_signals, activation='softsign'))
         optimizer = RMSprop(lr=0.001)
         mdl.compile(loss='mean_squared_error', optimizer=optimizer)
-        return
+        return mdl
 
     def model_prop_16(self, num_x_signals, num_y_signals):
         mdl = Sequential()
@@ -579,7 +621,7 @@ class Controller:
         mdl.add(Dense(num_y_signals, activation='softsign'))
         optimizer = RMSprop(lr=0.001)
         mdl.compile(loss='mean_squared_error', optimizer=optimizer)
-        return
+        return mdl
 
     def model_rudder_17(self, num_x_signals, num_y_signals):
         mdl = Sequential()
@@ -598,7 +640,7 @@ class Controller:
         mdl.add(Dense(num_y_signals, activation='softsign'))
         optimizer = RMSprop(lr=0.001)
         mdl.compile(loss='mean_squared_error', optimizer=optimizer)
-        return
+        return mdl
 
     def model_prop_17(self, num_x_signals, num_y_signals):
         mdl = Sequential()
@@ -617,7 +659,7 @@ class Controller:
         mdl.add(Dense(num_y_signals, activation='softsign'))
         optimizer = RMSprop(lr=0.001)
         mdl.compile(loss='mean_squared_error', optimizer=optimizer)
-        return
+        return mdl
 
     def model_rudder_18(self, num_x_signals, num_y_signals):
         mdl = Sequential()
@@ -636,7 +678,7 @@ class Controller:
         mdl.add(Dense(num_y_signals, activation='softsign'))
         optimizer = RMSprop(lr=0.001)
         mdl.compile(loss='mean_squared_error', optimizer=optimizer)
-        return
+        return mdl
 
     def model_prop_18(self, num_x_signals, num_y_signals):
         mdl = Sequential()
@@ -655,7 +697,7 @@ class Controller:
         mdl.add(Dense(num_y_signals, activation='softsign'))
         optimizer = RMSprop(lr=0.001)
         mdl.compile(loss='mean_squared_error', optimizer=optimizer)
-        return
+        return mdl
 
     def model_rudder_19(self, num_x_signals, num_y_signals):
         mdl = Sequential()
@@ -674,7 +716,7 @@ class Controller:
         mdl.add(Dense(num_y_signals, activation='softsign'))
         optimizer = RMSprop(lr=0.001)
         mdl.compile(loss='mean_squared_error', optimizer=optimizer)
-        return
+        return mdl
 
     def model_prop_19(self, num_x_signals, num_y_signals):
         mdl = Sequential()
@@ -693,7 +735,7 @@ class Controller:
         mdl.add(Dense(num_y_signals, activation='softsign'))
         optimizer = RMSprop(lr=0.001)
         mdl.compile(loss='mean_squared_error', optimizer=optimizer)
-        return
+        return mdl
 
     def model_rudder_20(self, num_x_signals, num_y_signals):
         mdl = Sequential()
@@ -712,7 +754,7 @@ class Controller:
         mdl.add(Dense(num_y_signals, activation='softsign'))
         optimizer = RMSprop(lr=0.001)
         mdl.compile(loss='mean_squared_error', optimizer=optimizer)
-        return
+        return mdl
 
     def model_prop_20(self, num_x_signals, num_y_signals):
         mdl = Sequential()
@@ -731,7 +773,7 @@ class Controller:
         mdl.add(Dense(num_y_signals, activation='softsign'))
         optimizer = RMSprop(lr=0.001)
         mdl.compile(loss='mean_squared_error', optimizer=optimizer)
-        return
+        return mdl
 
     def model_rudder_21(self, num_x_signals, num_y_signals):
         mdl = Sequential()
@@ -750,7 +792,7 @@ class Controller:
         mdl.add(Dense(num_y_signals, activation='softsign'))
         optimizer = RMSprop(lr=0.001)
         mdl.compile(loss='mean_squared_error', optimizer=optimizer)
-        return
+        return mdl
 
     def model_prop_21(self, num_x_signals, num_y_signals):
         mdl = Sequential()
@@ -769,7 +811,7 @@ class Controller:
         mdl.add(Dense(num_y_signals, activation='softsign'))
         optimizer = RMSprop(lr=0.001)
         mdl.compile(loss='mean_squared_error', optimizer=optimizer)
-        return
+        return mdl
 
     def load_data(self, loc):
         file = os.listdir(loc)
@@ -797,13 +839,15 @@ class Controller:
 
         print(model.summary())
         callbacks = self.define_callback(type)
+        init_time = datetime.datetime.now()
         model.fit_generator(generator=generator,
                             epochs=100,
                             steps_per_epoch=100,
                             validation_data=validation_data,
                             callbacks=callbacks)
-
-        print("Loss: " + str(self.run_test(model, x_test, y_test, type)))
+        train_time = datetime.datetime.now() - init_time
+        loss = self.run_test(model, x_test, y_test, type)
+        print("Loss: " + str(loss))
 
         strout = 'rudder' if type == RUDDER else 'propeller'
         model.save('./keras_logs/' + self.train_code + '/' + self.train_code + '_' + strout + '.h5')
@@ -822,8 +866,12 @@ class Controller:
 
         if type == RUDDER:
             self.model_rudder = model
+            self.rudder_logger.train_time = train_time
+            self.rudder_logger.loss = loss
         else:
             self.model_prop = model
+            self.prop_logger.train_time = train_time
+            self.prop_logger.loss = loss
 
     def run_test(self, model, x_test, y_test, type):
         if type == RUDDER:
@@ -1005,10 +1053,20 @@ if __name__ == '__main__':
 
     #model generator and scaler generator
     # for i in range(5):
+    year = str(datetime.datetime.now().year)
+    month = str(datetime.datetime.now().month)
+    day = str(datetime.datetime.now().day)
+    file = open('./keras_logs/train_log_' + year + '-' + month + '-' + day + '.txt', 'a+')
     for i in range(22):
-       model = Controller()
-       model.train('C:\\Users\\AlphaCrucis_Control1\\PycharmProjects\\Data_Filter\\Output\\Compilado\\', i)
-       model.test_case(10)
+        try:
+            model = Controller()
+            model.train('C:\\Users\\AlphaCrucis_Control1\\PycharmProjects\\Data_Filter\\Output\\Compilado\\', i)
+            file.write('\n*** Treinamento ' + model.train_code + ': OK')
+            model.test_case(10)
+        except Exception as e:
+            file.write('\n*** Treinamento ' + model.train_code + ': NOK')
+            file.write('\n\t' + str(e))
+    file.close()
 
     #model test
     #model = Controller()

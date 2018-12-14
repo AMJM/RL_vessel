@@ -1,3 +1,8 @@
+'''
+[AKUM-12/12/2018]
+Codigo fonte original de https://github.com/zeamendola89/RL_vessel/tree/refac com alteracoes apenas em convert_to_simple_state para complementar com o vetor esperado
+'''
+
 import numpy as np
 import pickle
 import os

@@ -1,3 +1,8 @@
+'''
+[AKUM-12/12/2018]
+Codigo fonte original sem alteracoes de https://github.com/zeamendola89/RL_vessel/tree/refac
+'''
+
 import numpy as np
 import math
 from simulation_settings import *

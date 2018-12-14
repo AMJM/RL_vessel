@@ -1,3 +1,8 @@
+'''
+[AKUM-12/12/2018]
+Codigo fonte original de https://github.com/zeamendola89/RL_vessel/tree/refac com alteracoes apenas para utilizar environment_rl em vez de environment
+'''
+
 import qlearning
 import environment_rl
 from simulation_settings import *
@@ -312,4 +317,5 @@ if __name__ == '__main__':
     # main()
     # sample_transitions(start, end)
     evaluate_agent('dyna/default_agentSequential_r_cte.h5')
+    #evaluate_agent('agents/agent_20180705085715Sequential_r____disc_0.8it42.h5')
 

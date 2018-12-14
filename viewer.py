@@ -1,6 +1,11 @@
+'''
+[AKUM-12/12/2018]
+Codigo fonte original de https://github.com/zeamendola89/RL_vessel/tree/refac com alteracoes apenas para salvar a imagem da simulacao
+'''
+
 import turtle
 import tkinter
-
+import canvasvg
 
 class Viewer(object):
     def __init__(self):
@@ -59,6 +64,11 @@ class Viewer(object):
 
     def freeze_screen(self):
         tkinter.mainloop()
+
+    def save_plot(self, train_code, simulation_code):
+        #ts = turtle.getscreen()
+        #ts.getcanvas().postscript(file='./keras_logs/' + train_code + '/simulation_log_' + simulation_code + '.ps')
+        canvasvg.saveall('./keras_logs/' + train_code + '/simulation_log_' + simulation_code + '.svg', turtle.getcanvas())
 
     # def __del__(self):
         # canvasvg.saveall("image.svg", turtle.getcanvas())

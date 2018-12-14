@@ -1,3 +1,8 @@
+'''
+[AKUM-12/12/2018]
+Codigo fonte original sem alteracoes de https://github.com/zeamendola89/RL_vessel/tree/refac
+'''
+
 #!/usr/bin/env python3
 
 # life.py -- A turtle-based version of Conway's Game of Life.

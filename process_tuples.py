@@ -1,3 +1,8 @@
+'''
+[AKUM-12/12/2018]
+Codigo fonte original sem alteracoes de https://github.com/zeamendola89/RL_vessel/tree/refac
+'''
+
 from geometry_helper import is_inbound_coordinate
 from simulation_settings import *
 from simulation_settings import geom_helper

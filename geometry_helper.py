@@ -1,3 +1,8 @@
+'''
+[AKUM-12/12/2018]
+Codigo fonte original sem alteracoes de https://github.com/zeamendola89/RL_vessel/tree/refac
+'''
+
 from shapely.geometry import Polygon, LineString, Point
 from shapely import affinity
 import numpy as np

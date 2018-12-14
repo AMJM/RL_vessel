@@ -1,3 +1,9 @@
+'''
+[AKUM-12/12/2018]
+Codigo fonte original sem alteracoes de https://github.com/zeamendola89/RL_vessel/tree/refac
+'''
+
+
 # -*- coding: utf-8 -*-
 import threading
 import buzz_python

@@ -1,3 +1,10 @@
+'''
+[AKUM-12/12/2018]
+Codigo fonte original de https://github.com/zeamendola89/RL_vessel/tree/refac com novos parametros para simulacao de rede neural supervisionada (alteracoes indicadas)
+
+Muito importante pois contem os parametros de controle da simulacao
+'''
+
 import datetime
 from geometry_helper import GeometryHelper
 import actions
@@ -21,7 +28,6 @@ main_loop_iterations = 10
 max_fit_iterations = 2000
 max_tuples_per_batch = 20000000
 maximum_training_steps = 20000000
-evaluation_steps = 1000
 max_episodes = 5000000
 steps_between_actions = 100
 funnel_start = (14000, 7000)
@@ -37,11 +43,15 @@ funnel_end = (14000, 4000)
 plot = False
 goal_heading_e_ccw = channel_angle_e_ccw(N03, N05)
 
+'''
+[AKUM-12/12/2018] Inicio das alteracoes
+'''
 # Variavel para controle do tipo de simulacao
 SIM_RL = 0      # Simulacao de reinforcement learning
 SIM_SUP = 1     # Simulacao supervisionada
 simulation_type = SIM_SUP
 
+# Constantes para ordenacao no vetor de estado
 ST_POSX = 0
 ST_POSY = 1
 ST_POSZZ = 2
@@ -50,18 +60,38 @@ ST_VELY = 4
 ST_VELZZ = 5
 ST_TARGET = 1
 ST_MID = 0
+ST_DPB = 0
+ST_DSB = 1
+ST_COG = 0
+ST_SOG = 1
+ST_LOCAL_COG = 2
 
-list_buoys = [Point(11722.4553, 5583.4462), Point(11771.3626, 5379.2566), Point(9189.9177, 4969.4907), Point(9237.9939, 4765.5281),
-              Point(6895.1451, 4417.3749), Point(6954.9285, 4225.9083), Point(5540.617, 4088.186), Point(5809.4056, 3767.7633)]
+# Vetor do posicionamento das boias
+list_buoys = [Point(11724.8015, 5582.9127), Point(11770.3259, 5378.4429), Point(9191.6506, 4967.8532), Point(9235.8653, 4772.7884),
+              Point(6897.7712, 4417.3295), Point(6955.9288, 4227.1846), Point(5539.2417, 4089.4744), Point(5812.6136, 3768.5637)]
+
+# Ponto de define o ponto final da embarcacao
 target = Point(5790.0505, 3944.9947)
-p3dfile = "Aframax_Full_revTannuri.p3d"
 
+# Vetores com as velocidades da embarcacao discretizadas, depende muito de qual embarcacao esta sendo simulada
 discrete_velocity = [-0.8, -0.6, -0.4, -0.2, 0.0, 0.2, 0.4, 0.6, 0.8]
+#discrete_velocity = [-0.8, -0.6, -0.4, -0.35, 0.0, 0.35, 0.4, 0.7, 0.8]
+#discrete_velocity = [-0.8, -0.7, -0.5, -0.4, 0.0, 0.4, 0.5, 0.7, 0.8]
+
+# Constantes de referencia para maximo leme e numero de ordem de maquinas possiveis
 MAX_RUDDER_RAD = 0.61
 NUM_PROP_VEL = 4
 
-steps = 20
-step_increment = 0.5
+# Parametros de controle da simulacao
+# Quantidade maxima de passos simulados
+evaluation_steps = 100000
+# Quantidade de passos entre verificacao de estados e envio de comandos
+steps = 1 #20
+# Tempo de simulacao entre passos - muito importante para redes neurais recorrentes, precisam ser compativeis
+step_increment = 0.1 #0.5
+'''
+[AKUM-12/12/2018] Fim das alteracoes
+'''
 
 goal_vel_lon = 3
 buoys = (funnel_start, N01, N03, N05, N07, Final, N06, N04, N02, funnel_end)

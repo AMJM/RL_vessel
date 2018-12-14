@@ -1,6 +1,9 @@
 '''
-Codigo legado do Data Filter adaptado
-Data de obtencao: 06-09-2018
+[AKUM-12/12/2018]
+Codigo legado do Data Filter adpatados (P3D_file, Point e Ship)
+Data Filter: projeto para gerar os dados utilizados na simulacao
+
+Proposito: codigo auxiliar para modelagem interna dos dados e compatibilizar a comunicacao entre os dados do Dyna e da rede neural
 '''
 
 
@@ -48,7 +51,7 @@ class P3D_file:
 
 
 '''
-Classe para definicao de um ponto em coordenadas cartesianas
+Classe para definicao de um ponto ou vetor em coordenadas cartesianas
 '''
 class Point:
     # Construtor da classe
@@ -61,6 +64,8 @@ class Point:
         self.x = x
         self.y = y
         self.zz = zz
+        self.mod = m.sqrt(x ** 2 + y ** 2)
+        self.angle = m.degrees(m.atan2(y, x))
 
 
 '''
@@ -69,9 +74,7 @@ Classe para suporte de embarcacoes
 class Ship:
     # Construtor da classe
     # Entrada:
-    #   name: nome da embarcacao
     #   dim: vetor com as dimensoes da embarcacao - [beam height length]
-    #   velocity: objeto com as velocidades da embarcacao
     # Saida:
     #   None
     def __init__(self, dim):
@@ -157,6 +160,43 @@ class Ship:
 
         return [dml, dtg]
 
+    # Metodo para calculo de cog (course over ground) e sog (speed over ground)
+    # Entrada:
+    #   center: coordenada cartesiana do centro da embarcacao
+    #   angle: angulo de aproamento da embarcacao em graus
+    #   buoys: vetor com as posicoes das boias aos pares
+    #   vx: velocidade surge (direção longitudinal da embarcação)
+    #   vy: velocidade sway (direção no eixo lateral da embarcação)
+    # Saida:
+    #   cog: angulo da velocidade total
+    #   sog: modulo da velocidade total
+    def calc_cog_sog(self, center, angle, buoys, vx, vy):
+        # Determina em qual secao de boias esta o ponto medio frontal e traseiro
+        section = self._determine_section(center, buoys)
+
+        b1 = buoys[section]
+        b2 = buoys[section + 1]
+        p1 = Point((b1.x + b2.x) / 2, (b1.y + b2.y) / 2)
+
+        b1 = buoys[section + 2]
+        b2 = buoys[section + 3]
+        p2 = Point((b1.x + b2.x) / 2, (b1.y + b2.y) / 2)
+
+        # Define um vetor velocidade
+        vec_vel = Point(vx, vy)
+
+        # Define o angulo da linha media do canal
+        channel_angle = self._angle_point_point(p1, p2)
+
+        # cog global = aproamento + angulo da velocidade
+        cog = angle + vec_vel.angle
+        # sog = modulo da velocidade total
+        sog = vec_vel.mod
+        # cog local = deslocamento do cog em relacao ao angulo do canal
+        local_cog = channel_angle - cog
+
+        return [cog, sog, local_cog]
+
     # Metodo para definicao entre quais boias esta a embarcacao
     # Entrada:
     #   point: coordenada cartesiana do ponto a ser verificado
@@ -219,56 +259,127 @@ class Ship:
     # Entrada:
     #   p1: coordenadas do primeiro ponto
     #   p2: coordenadas do segundo ponto
-    #   type: -1 para relacao estibordo e 1 para relacao bombordo
     # Saida:
     #   Distancia entre os pontos
     def _dist_point_point(self, p1, p2):
         return m.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2)
 
+    # Metodo para calculo de angulo entre pontos
+    # Entrada:
+    #   p1: coordenadas do primeiro ponto
+    #   p2: coordenadas do segundo ponto
+    # Saida:
+    #   Angulo entre pontos
+    def _angle_point_point(self, p1, p2):
+        return m.degrees(m.atan2(p2.y - p1.y, p2.x - p1.x))
+
 
 '''
-Metodo principal
+Classe principal auxiliar da interface Dyna e rede neural
+Obs.: dependendo do modelo de rede neural, sera muito importante alterar os metodos get_inputtable_rudder_state e get_inputtable_prop_state para compatibilizar a comunicacao
 '''
 class State_Helper:
+    # Construtor da classe
+    # Entrada:
+    #   path: endereco para o arquivo p3d
+    #   buoys: vetor com as posicoes das boias
+    #   target: coordenada cartesiana do target
+    # Saida:
+    #   None
     def __init__(self, path, buoys, target):
         ship_dim = P3D_file(path).find_dimensions()
         self.ship = Ship(ship_dim)
         self.buoys = buoys
         self.target = target
 
+    # Gera informacoes auxiliares sobre os estados - distancia bombordo, boreste, cog, sog e local sog
+    # Entrada:
+    #   state: vetor com o estado [posicao_x, posicao_y, angulo_aproamento, velocidade_avanco, velocidade_deriva, velocidade_guinada]
+    # Saida:
+    #   Vetor dos estados auxiliares [distancia_bombordo, distancia_boreste, course_over_ground, speed_over_ground, course_over_ground_local]
+    def get_aux_states(self, state):
+        from simulation_settings import ST_MID, ST_TARGET, ST_POSX, ST_POSY, ST_POSZZ, ST_VELX, ST_VELY, ST_VELZZ, ST_DPB, ST_DSB, ST_COG, ST_SOG, ST_LOCAL_COG
+        center = Point(state[ST_POSX], state[ST_POSY])
+        angle = self.get_converted_angle(state[ST_POSZZ])
+        position = self.ship.calc_dist_lateral(center, angle, self.buoys, self.target)
+        velocity = self.ship.calc_cog_sog(center, angle, self.buoys, state[ST_VELX], state[ST_VELY])
+        return [position[ST_DPB], position[ST_DSB], velocity[ST_COG], velocity[ST_SOG], velocity[ST_LOCAL_COG]]
+
+    # Gera o estado no formato esperado pela rede neural de controle do leme
+    # Entrada:
+    #   state: vetor com o estado [posicao_x, posicao_y, angulo_aproamento, velocidade_avanco, velocidade_deriva, velocidade_guinada]
+    # Saida:
+    #   Vetor dos estados auxiliares [angulo_aproamento, velocidade_avanco, velocidade_deriva, velocidade_guinada, distancia_linha_media]
     def get_inputtable_rudder_state(self, state):
         from simulation_settings import ST_MID, ST_TARGET, ST_POSX, ST_POSY, ST_POSZZ, ST_VELX, ST_VELY, ST_VELZZ
         center = Point(state[ST_POSX], state[ST_POSY])
         angle = self.get_converted_angle(state[ST_POSZZ])
         position = self.ship.calc_dist_midline(center, angle, self.buoys, self.target)
+        # Aparentemente a base utilizada e negativa entao para compatibilizar precisa do oposto da velocidade de guinada
+        return [angle, state[ST_VELX], state[ST_VELY], -state[ST_VELZZ], position[ST_MID]]
 
-        # TODO: Arrumar essa entrada da rede
-        # return [position[ST_MID], position[ST_TARGET], angle, state[ST_VELX], state[ST_VELY], state[ST_VELZZ]]
-        return [angle, state[ST_VELX], state[ST_VELY], state[ST_VELZZ], position[ST_MID]]
-
+    # Gera o estado no formato esperado pela rede neural de controle de maquina
+    # Entrada:
+    #   state: vetor com o estado [posicao_x, posicao_y, angulo_aproamento, velocidade_avanco, velocidade_deriva, velocidade_guinada]
+    # Saida:
+    #   Vetor dos estados auxiliares [angulo_aproamento, velocidade_avanco, velocidade_deriva, velocidade_guinada, distancia_linha_media, distancia_target]
     def get_inputtable_prop_state(self, state):
         from simulation_settings import ST_MID, ST_TARGET, ST_POSX, ST_POSY, ST_POSZZ, ST_VELX, ST_VELY, ST_VELZZ
         center = Point(state[ST_POSX], state[ST_POSY])
         angle = self.get_converted_angle(state[ST_POSZZ])
         position = self.ship.calc_dist_midline(center, angle, self.buoys, self.target)
+        # Aparentemente a base utilizada e negativa entao para compatibilizar precisa do oposto da velocidade de guinada
+        return [angle, state[ST_VELX], state[ST_VELY], -state[ST_VELZZ], position[ST_MID], position[ST_TARGET]]
 
-        # TODO: Arrumar essa entrada da rede
-        # return [position[ST_MID], position[ST_TARGET], angle, state[ST_VELX], state[ST_VELY], state[ST_VELZZ]]
-        return [angle, state[ST_VELX], state[ST_VELY], state[ST_VELZZ], position[ST_MID], position[ST_TARGET]]
-
+    # Gera a ordem de maquina no formato esperado pelo Dyna (percentual da rotacao total)
+    # Entrada:
+    #   action: ordem de maquina gerada pela rede neural
+    # Saida:
+    #   Ordem de maquina esperada pelo Dyna
     def get_converted_propeller(self, action):
         from simulation_settings import discrete_velocity, NUM_PROP_VEL
         return discrete_velocity[action + NUM_PROP_VEL]
 
+    # Gera a ordem de leme no formato esperado pelo Dyna (percentual do leme maximo)
+    # Entrada:
+    #   action: ordem de leme gerado pela rede neural
+    # Saida:
+    #   Ordem de leme esperado pelo Dyna
     def get_converted_rudder(self, action):
         from simulation_settings import MAX_RUDDER_RAD
         return action / MAX_RUDDER_RAD
 
+    # Converte angulo entre coordenada cartesiana (leste-antihorario) e coordenada maritima (norte-horaria)
+    # Entrada:
+    #   angle: angulo em graus
+    # Saida:
+    #   Angulo em graus convertido
     def get_converted_angle(self, angle):
         return -270 - angle
 
+    # Posiciona a embarcacao no mapeamento do ambiente
+    # Entrada:
+    #   state: vetor com o estado [posicao_x, posicao_y, angulo_aproamento, velocidade_avanco, velocidade_deriva, velocidade_guinada]
+    # Saida:
+    #   Angulo em graus convertido
     def set_position(self, state):
         from simulation_settings import ST_POSX, ST_POSY, ST_POSZZ, geom_helper
         geom_helper.set_polygon_position(state[ST_POSX], state[ST_POSY], state[ST_POSZZ])
         if geom_helper.ship_collided():
             print('SHIP COLLIDED!!!')
+
+    # Converte o vetor de estado global para o local
+    # Entrada:
+    #   state: vetor com o estado [posicao_x, posicao_y, angulo_aproamento, velocidade_x_global, velocidade_y_global, velocidade_guinada]
+    # Saida:
+    #   Vetor dos estados locais [posicao_x, posicao_y, angulo_aproamento, velocidade_avanco, velocidade_deriva, velocidade_guinada]
+    def convert_cartesian_to_local(self, state):
+        from simulation_settings import ST_POSX, ST_POSY, ST_POSZZ, ST_VELX, ST_VELY, ST_VELZZ
+        heading_e_ccw = 90 - state[ST_POSZZ]
+        theta = np.radians(heading_e_ccw)
+        c, s = np.cos(theta), np.sin(theta)
+        # Matriz de rotacao para os vetores de velocidade
+        m = np.matrix(((c, s), (-s, c)))
+        global_array = np.matrix([[state[ST_VELX], state[ST_VELY]]]).T
+        transformed = m * global_array
+        return state[ST_POSX], state[ST_POSY], state[ST_POSZZ], transformed.item(0), transformed.item(1), state[ST_VELZZ]

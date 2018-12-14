@@ -1,3 +1,8 @@
+'''
+[AKUM-12/12/2018]
+Codigo fonte original de https://github.com/zeamendola89/RL_vessel/tree/refac com alteracoes apenas para utilizar environment_rl em vez de environment
+'''
+
 from simulation_settings import *
 import reward
 import learner

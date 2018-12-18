@@ -1,0 +1,1 @@
+Para usar esse modelos, tirar da pasta relatorio e deixar direto na pasta keras_logs

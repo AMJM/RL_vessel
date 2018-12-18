@@ -1,0 +1,11 @@
+
+
+*** Treinamento RUDDER ***
+	Resultado: CONCLUÍDO SEM ERRO
+	Tempo de treinamento: 1:30:43.710194
+	Loss: 0.012975488789379597
+
+*** Treinamento PROPELLER ***
+	Resultado: CONCLUÍDO SEM ERRO
+	Tempo de treinamento: 0:20:55.073697
+	Loss: 0.003802055725827813

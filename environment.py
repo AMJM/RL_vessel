@@ -1,6 +1,13 @@
+'''
+[AKUM-18/12/2018]
+Arquivo de gerenciamento de environment adaptado do original para considerar um aprendizado supervisionado
+'''
+
+'''
+Importacao das bibliotecas a serem utilizadas
+'''
 # -*- coding: utf-8 -*-
 import threading
-
 import buzz_python
 import itertools
 import utils
@@ -11,9 +18,15 @@ from simulation_settings import *
 import pickle
 import random
 
-
-
+'''
+Classe para gerenciar o environment de simulacao
+'''
 class Environment(buzz_python.session_subscriber):
+    # Construtor da classe
+    # Entrada:
+    #   rw_mapper: obj RewardMapper para aprendizado por reforço - None para aprendizado supervisionado
+    # Saida:
+    #   None
     def __init__(self, rw_mapper=None):
         super(Environment, self).__init__()
         self.simulation_id = 'sim'
@@ -29,63 +42,21 @@ class Environment(buzz_python.session_subscriber):
         self.thruster = []
         self.max_angle = 0
         self.max_rot = 0
-        if rw_mapper == None and simulation_type == SIM_RL:
+        if rw_mapper is None and simulation_type == SIM_RL:
             print("ERRO: Reinforcement learning sem reward map")
         self.reward_mapper = rw_mapper
         self.init_state = list()
         self._final_flag = False
         self.initial_states_sequence = None
-        os.chdir('./dyna')
+        os.chdir('./dyna') # Cuidado se quiser salvar os dados, pode comecar a dar problema pela mudanca da raiz da pasta
         self.dyna_proc = None
         self.accumulated_starts = list()
 
-    def get_sample_states(self):
-        # TODO implement
-        x = np.linspace(5000, 13000, 16)
-        y = np.linspace(3000, 8000, 100)
-        # theta = np.linspace(-90, -120, 4)
-        # theta = np.append(theta, -103)
-        vel_decay = 4 / 13000
-        theta = -103
-        vlon = np.linspace(1.5, 3.0, 4)
-        g = np.meshgrid(x, y, theta, vlon)
-        tmp = np.vstack(map(np.ravel, g))
-        combinations = np.transpose(tmp)
-        states = list()
-        for comb in combinations:
-            if is_inbound_coordinate(self.reward_mapper.boundary, comb[0], comb[1]):
-                states.append((comb[0], comb[1], comb[2], comb[3], 0, 0))
-        return states
-
-    def create_variants_to_start(self, local_coord_start):
-        start_variants = list()
-        x = np.linspace(-20, 20, 5)
-        y = np.linspace(-20, 20, 5)
-        theta = np.linspace(-5, +5, 3)
-        vlon = np.linspace(-0.2, +0.2, 3)
-        vdrift = np.linspace(-0.1, +0.1, 3)
-        theta_p = np.linspace(-0.1, +0.1, 3)
-        g = np.meshgrid(x, y, theta, vlon, vdrift, theta_p)
-        tmp = np.vstack(map(np.ravel, g))
-        shifts = np.transpose(tmp)
-        for shift in shifts:
-            if is_inbound_coordinate(geom_helper.boundary, shift[0] + local_coord_start[0],
-                                     shift[1] + local_coord_start[1]):
-                gl_vars = [(org + shift) for org, shift in zip(shift, local_coord_start)]
-                start_variants.append(tuple(gl_vars))
-        return start_variants
-
-    def add_states_to_start_list(self, global_coord_state):
-        print("Adding states to start list.")
-        v_lon, v_drift, not_used = utils.global_to_local(global_coord_state[3], global_coord_state[4],
-                                                         global_coord_state[2])
-        new_start_state = (global_coord_state[0], global_coord_state[1], global_coord_state[2],
-                           v_lon, v_drift, global_coord_state[5])
-        variants_list = self.create_variants_to_start(new_start_state)
-        variants_list.append(new_start_state)
-        self.accumulated_starts.append(new_start_state)
-        self.accumulated_starts += variants_list
-
+    # Verifica se a simulacao pode ser considerada finalizada
+    # Entrada:
+    #   None
+    # Saida:
+    #   ret: 1 chegou ao final do canal, -1 se colidiu na margem, 0 simulacao nao finalizada
     def is_final(self):
         ret = 0
         if geom_helper.reached_goal():
@@ -107,6 +78,11 @@ class Environment(buzz_python.session_subscriber):
         if process.get_id() == self.dyna_ctrl_id:
             self.allow_advance_ev.set()
 
+    # Inicializacao do ambiente de simulacao
+    # Entrada:
+    #   None
+    # Saida:
+    #   None
     def set_up(self):
         self.dyna_proc = subprocess.Popen(
             ['Dyna_reset_prop.exe ', '--pid', '407', '-f', 'suape-local.json', '-c', '127.0.0.1'])
@@ -139,11 +115,21 @@ class Environment(buzz_python.session_subscriber):
         self.advance()
         self.get_propulsion()
 
+    # Inicializacao da simulacao
+    # Entrada:
+    #   None
+    # Saida:
+    #   None
     def start(self):
         self.dyna_ready_ev.wait()
         self.simulation.start()
         self.dyna_ready_ev.clear()
 
+    # [AKUM] Nao tenho certeza, mas acredito que com o id do navio definido seja possivel obter informacoes para o comandos que sao definidos neste metodo
+    # Entrada:
+    #   None
+    # Saida:
+    #   None
     def get_propulsion(self):
         thr_tag = buzz_python.thruster_tag()
         self.simulation.is_publisher(thr_tag, thr_tag.SMH_DEMANDED_ROTATION)
@@ -173,6 +159,11 @@ class Environment(buzz_python.session_subscriber):
         self.simulation.update(self.rudder)
         self.max_angle = self.rudder.get_maximum_angle()
 
+    # Obtem o estado da embarcacao
+    # Entrada:
+    #   None
+    # Saida:
+    #   Estado: vetor com o estado [posicao_x, posicao_y, angulo_aproamento norte horario, velocidade_avanco, velocidade_deriva, velocidade_guinada]
     def get_state(self):
         self.simulation.sync(self.vessel)
         lin_pos_vec = self.vessel.get_linear_position()
@@ -187,11 +178,22 @@ class Environment(buzz_python.session_subscriber):
         theta_p = ang_vel_vec[2]
         return x, y, theta, xp, yp, theta_p
 
+    # Avanca a simulacao para o proximo passo de tempo
+    # Entrada:
+    #   None
+    # Saida:
+    #   None
     def advance(self):
         self.allow_advance_ev.wait()
         self.simulation.advance_time()
         self.allow_advance_ev.clear()
 
+    # Envia os comandos de maquina e leme para prosseguir a simulacao
+    # Entrada:
+    #   angle_level: porcentagem do leme maximo
+    #   rot_level: porcentagem da rotacao maxima
+    # Saida:
+    #   Estado: vetor com o estado [posicao_x, posicao_y, angulo_aproamento norte horario, velocidade_avanco, velocidade_deriva, velocidade_guinada]
     def step(self, angle_level, rot_level):
         """**Implement Here***
             The state transition. The agent executed the action in the parameter
@@ -220,29 +222,19 @@ class Environment(buzz_python.session_subscriber):
         else:
             return statePrime
 
-    def start_bifurcation_mode(self):
-        random.shuffle(self.accumulated_starts)
-        self.initial_states_sequence = itertools.cycle(self.accumulated_starts)
-        print('Total of {} starting points generated.'.format(len(self.accumulated_starts)))
-        with open('samples/starting_points_global_coord' + timestamp, 'wb') as starts_file:
-            pickle.dump(self.accumulated_starts, starts_file)
-
+    # Define o estado inicial da proxima simulacao
+    # Entrada:
+    #   None
+    # Saida:
+    #   None
     def move_to_next_start(self):
         self.init_state = next(self.initial_states_sequence)
 
-    def starts_from_file_mode(self, file_name):
-        start_list = list()
-        with open(file_name, 'rb') as infile:
-            print('Loading file:', file_name)
-            try:
-                while True:
-                    start_list = pickle.load(infile)
-            except EOFError as e:
-                pass
-        print('Number of transitions added : ', len(start_list))
-        random.shuffle(start_list)
-        self.initial_states_sequence = itertools.cycle(start_list)
-
+    # Define simulacao unica com apenas um estado inicial
+    # Entrada:
+    #   init_state: vetor com o estado [posicao_x, posicao_y, angulo_aproamento norte horario, velocidade_avanco, velocidade_deriva, velocidade_guinada]
+    # Saida:
+    #   None
     def set_single_start_pos_mode(self, init_state=None):
         if not init_state:
             org_state = self.get_state()
@@ -256,22 +248,16 @@ class Environment(buzz_python.session_subscriber):
         dummy_list.append(self.init_state)
         self.initial_states_sequence = itertools.cycle(dummy_list)
 
-    def set_sampling_mode(self, start=0, end=-1):
-        states = self.get_sample_states()
-        print('#####TOTAL STARTING STATES AVAILABLE:{}'.format(len(states)))
-        start = int(start)
-        end = int(end)
-        if len(states) > start:
-            if len(states) > end != -1:
-                states = states[start:end]
-            else:
-                states = states[start:]
-        self.initial_states_sequence = itertools.cycle(states)
-
-    def reset_to_start(self):
-        self.reset_state_localcoord(self.init_state[0], self.init_state[1], self.init_state[2], self.init_state[3],
-                                    self.init_state[4], self.init_state[5])
-
+    # Define o estado na embarcacao do Dyna
+    # Entrada:
+    #   x: posicao cartesiana em x (m)
+    #   y: posicao cartesiana em y (m)
+    #   theta: angulo de aproamento em graus norte horario (º)
+    #   vel_lon: velocidade de avanco (m/s)
+    #   vel_drift: velocidade de deriva (m/s)
+    #   vel_theta: velocidade de guinada (º/s)
+    # Saida:
+    #   None
     def reset_state_localcoord(self, x, y, theta, vel_lon, vel_drift, vel_theta):
         # Apparently Dyna ADV is using theta n_cw
         self.vessel.set_linear_position([x, y, 0.00])
@@ -281,12 +267,26 @@ class Environment(buzz_python.session_subscriber):
         if simulation_type == SIM_RL:
             self.reward_mapper.initialize_ship(x, y, theta, vel_lon, vel_drift, vel_theta)
         self.simulation.sync(self.vessel)
+        self.advance()
+        self.advance()
+        self.advance()
+        self.simulation.sync(self.vessel)
 
+    # Finaliza a simulacao
+    # Entrada:
+    #   None
+    # Saida:
+    #   None
     def finish(self):
         if self.simulation:
             self.simulation.stop()
             self.dyna_proc.terminate()
 
+    # Metodo destrutor
+    # Entrada:
+    #   None
+    # Saida:
+    #   None
     def __del__(self):
         if self.simulation:
             self.simulation.stop()
